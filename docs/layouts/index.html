@@ -175,7 +175,7 @@
 
                   {{ "<!--wrapper for slides start-->" | safeHTML }}
                   <div class="carousel-inner owl-carousel">
-{{ partial "quotes.html" ((where $.Site.Data.references.quotes "date" "ge" (now.AddDate -2 0 0) | shuffle )) }}
+{{ partial "quotes.html" ((where $.Site.Data.references.quotes "date" "ge" (.Now.AddDate -2 0 0) | shuffle )) }}
                   </div>
                   {{ "<!--wrapper for slides end-->" | safeHTML }}
 
