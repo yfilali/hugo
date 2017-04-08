@@ -16,8 +16,7 @@ package hugolib
 import (
 	"bytes"
 	"crypto/md5"
-	"fmt"
-	"io"
+	"encoding/hex"
 	"path"
 
 	"github.com/dchest/cssmin"
@@ -54,24 +53,25 @@ type cssHandler struct{ basicFileHandler }
 
 func (h cssHandler) Extensions() []string { return []string{"css"} }
 func (h cssHandler) FileConvert(f *source.File, s *Site) HandledResult {
-	var fileHash []byte
-	x := cssmin.Minify(f.Bytes())
+	fBytes := f.Bytes()
+	fPath := f.Path()
+	x := cssmin.Minify(fBytes)
+
+	hash := md5.New()
+	hash.Write(fBytes)
+	fileHash := hex.EncodeToString(hash.Sum([]byte{}))
+
+	ext := path.Ext(fPath)
+	hashedPath := fPath[0:len(fPath)-len(ext)] + "-" + fileHash + ext
+
+	herr := s.publish(hashedPath, bytes.NewReader(x))
+	if herr != nil {
+		return HandledResult{err: herr}
+	}
 
 	err := s.publish(fPath, bytes.NewReader(x))
 	if err != nil {
 		return HandledResult{err: err}
 	}
-
-	hash := md5.New()
-	if _, err := io.Copy(hash, bytes.NewReader(f.Bytes())); err == nil {
-		fPath = f.Path()
-		ext := path.Ext(fPath)
-		newPath := fPath[0:len(fPath)-len(ext)] + "-" + fmt.Sprintf("%x", hash.Sum(fileHash)) + ext
-		err := s.publish(newPath, bytes.NewReader(x))
-		if err != nil {
-			return HandledResult{err: err}
-		}
-	}
-
 	return HandledResult{file: f}
 }
