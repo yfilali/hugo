@@ -15,6 +15,10 @@ package hugolib
 
 import (
 	"bytes"
+	"crypto/md5"
+	"fmt"
+	"io"
+	"path"
 
 	"github.com/dchest/cssmin"
 	"github.com/spf13/hugo/source"
@@ -50,10 +54,24 @@ type cssHandler struct{ basicFileHandler }
 
 func (h cssHandler) Extensions() []string { return []string{"css"} }
 func (h cssHandler) FileConvert(f *source.File, s *Site) HandledResult {
+	var fileHash []byte
 	x := cssmin.Minify(f.Bytes())
-	err := s.publish(f.Path(), bytes.NewReader(x))
+
+	err := s.publish(fPath, bytes.NewReader(x))
 	if err != nil {
 		return HandledResult{err: err}
 	}
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, bytes.NewReader(f.Bytes())); err == nil {
+		fPath = f.Path()
+		ext := path.Ext(fPath)
+		newPath := fPath[0:len(fPath)-len(ext)] + "-" + fmt.Sprintf("%x", hash.Sum(fileHash)) + ext
+		err := s.publish(newPath, bytes.NewReader(x))
+		if err != nil {
+			return HandledResult{err: err}
+		}
+	}
+
 	return HandledResult{file: f}
 }
